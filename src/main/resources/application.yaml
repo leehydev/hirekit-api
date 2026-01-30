@@ -7,3 +7,36 @@ spring:
     show-sql: false
   flyway:
     locations: classpath:db/migration
+  # OAuth2 설정 (카카오) - 공통으로 여기에 추가
+  security:
+    oauth2:
+      client:
+        # 카카오 등록 정보
+        registration:
+          kakao:
+            # 카카오 REST API 키
+            client-id: ${KAKAO_CLIENT_ID}
+            # 카카오 Client Secret (보안 탭에서 생성)
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            # 인가 코드 방식
+            authorization-grant-type: authorization_code
+            # 인가 코드 받을 URI
+            redirect-uri: ${KAKAO_REDIRECT_URI}
+            # 인증 방식
+            client-authentication-method: client_secret_post
+            # 요청 권한
+            scope:
+              - profile_nickname
+              - profile_image
+              - account_email
+        # 카카오 엔드포인트 정보
+        provider:
+          kakao:
+            # 인가 코드 요청 URL
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            # 토큰 요청 URL
+            token-uri: https://kauth.kakao.com/oauth/token
+            # 사용자 정보 요청 URL
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            # 사용자 ID 필드명
+            user-name-attribute: id
