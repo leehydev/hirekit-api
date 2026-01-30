@@ -1,5 +1,6 @@
 package kr.hirekit.api.auth.oauth2;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Map;
@@ -33,7 +34,7 @@ public class KakaoUserInfo implements OAuth2UserInfo {
             KakaoAccount kakaoAccount = mapper.convertValue(kakaoAccountObj, KakaoAccount.class);
             if (kakaoAccount.profile() != null) {
                 tempNickname = kakaoAccount.profile().nickname();
-                tempProfileImage = kakaoAccount.profile().profileImageUrl();
+                tempProfileImage = kakaoAccount.profile().thumbnail_image_url();
             }
         }
 
@@ -62,11 +63,13 @@ public class KakaoUserInfo implements OAuth2UserInfo {
     }
 
     // 내부 파싱용 record (Java 17)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoAccount(KakaoProfile profile) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoProfile(
             String nickname,
-            String profileImageUrl) {
+            String thumbnail_image_url) {
     }
 }
