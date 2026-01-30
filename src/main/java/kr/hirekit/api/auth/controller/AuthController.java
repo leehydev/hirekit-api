@@ -1,13 +1,14 @@
 package kr.hirekit.api.auth.controller;
 
-import kr.hirekit.api.auth.dto.TokenRefreshRequest;
-import kr.hirekit.api.auth.dto.TokenResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import kr.hirekit.api.auth.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,60 +16,131 @@ import java.util.UUID;
 
 /**
  * 인증 관련 API 컨트롤러
- * 로그인, 토큰 갱신 등 인증 관련 엔드포인트 제공
+ * 토큰 갱신, 로그아웃 등 인증 관련 엔드포인트 제공
  */
 @Slf4j
-@RestController // REST API 컨트롤러임을 표시, JSON 반환
-@RequestMapping("/api/auth") // 이 컨트롤러의 모든 API는 /api/auth로 시작
-@RequiredArgsConstructor // final 필드를 주입받는 생성자 자동 생성
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    // JWT 토큰 생성/검증 담당
     private final JwtTokenProvider jwtTokenProvider;
+
+    // 쿠키 도메인 (application.yml에서 주입)
+    @Value("${app.cookie-domain}")
+    private String cookieDomain;
+
+    // Access Token 만료 시간 (밀리초)
+    @Value("${jwt.access-token-expiry}")
+    private long accessTokenExpiry;
+
+    // Refresh Token 만료 시간 (밀리초)
+    @Value("${jwt.refresh-token-expiry}")
+    private long refreshTokenExpiry;
 
     /**
      * 토큰 갱신 API
-     * Refresh Token으로 새로운 Access Token 발급
-     * 
-     * 요청 예시:
-     * POST /api/auth/refresh
-     * Body: { "refreshToken": "xxx" }
-     * 
-     * 응답 예시:
-     * { "accessToken": "새토큰", "refreshToken": "기존토큰" }
-     * 
-     * @param request Refresh Token을 담은 요청 객체
-     * @return 새로운 토큰 정보
+     * 쿠키의 Refresh Token으로 새로운 Access Token 발급
+     *
+     * 요청: POST /api/auth/refresh (쿠키에 refreshToken 포함)
+     * 응답: 새로운 accessToken 쿠키 설정
      */
-    @PostMapping("/refresh") // POST /api/auth/refresh 요청 처리
-    public ResponseEntity<TokenResponse> refresh(@RequestBody TokenRefreshRequest request) {
+    @PostMapping("/refresh")
+    public ResponseEntity<Void> refresh(
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        // 1. 쿠키에서 Refresh Token 추출
+        String refreshToken = extractTokenFromCookie(request, "refreshToken");
 
-        // 1. 요청에서 Refresh Token 꺼내기
-        String refreshToken = request.getRefreshToken();
-
-        // 2. Refresh Token 유효성 검증
-        // - 위조된 토큰인지
-        // - 만료된 토큰인지
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
-            log.warn("토큰 갱신 실패 - 유효하지 않은 Refresh Token");
-
-            // 401 Unauthorized 응답
+        // 2. Refresh Token 없으면 401 반환
+        if (refreshToken == null) {
+            log.warn("토큰 갱신 실패 - Refresh Token 쿠키 없음");
             return ResponseEntity.status(401).build();
         }
 
-        // 3. Refresh Token에서 회원 ID 추출
-        UUID memberId = jwtTokenProvider.getMemberId(refreshToken);
+        // 3. Refresh Token 유효성 검증
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            log.warn("토큰 갱신 실패 - 유효하지 않은 Refresh Token");
+            return ResponseEntity.status(401).build();
+        }
 
+        // 4. Refresh Token에서 회원 ID 추출
+        UUID memberId = jwtTokenProvider.getMemberId(refreshToken);
         log.info("토큰 갱신 성공 - 회원 ID: {}", memberId);
 
-        // 4. 새로운 Access Token 생성
-        // (Refresh Token은 그대로 재사용)
+        // 5. 새로운 Access Token 생성
         String newAccessToken = jwtTokenProvider.createAccessToken(memberId);
 
-        // 5. 응답 객체 생성 및 반환
-        TokenResponse response = new TokenResponse(newAccessToken, refreshToken);
+        // 6. 새로운 Access Token을 쿠키에 저장
+        addCookieWithSameSite(response, "accessToken", newAccessToken, (int) (accessTokenExpiry / 1000));
 
-        // 200 OK + 토큰 정보 반환
-        return ResponseEntity.ok(response);
+        // 7. 204 No Content 반환 (응답 본문 없음, 쿠키만 설정)
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 로그아웃 API
+     * Access Token, Refresh Token 쿠키 삭제
+     *
+     * 요청: POST /api/auth/logout
+     * 응답: 쿠키 삭제 (Max-Age=0)
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        // Max-Age=0 으로 쿠키 삭제
+        addCookieWithSameSite(response, "accessToken", "", 0);
+        addCookieWithSameSite(response, "refreshToken", "", 0);
+
+        log.info("로그아웃 완료");
+
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 쿠키에서 특정 토큰 추출
+     *
+     * @param request    HTTP 요청
+     * @param cookieName 쿠키 이름
+     * @return 토큰 값 (없으면 null)
+     */
+    private String extractTokenFromCookie(HttpServletRequest request, String cookieName) {
+        Cookie[] cookies = request.getCookies();
+
+        // 쿠키가 없으면 null
+        if (cookies == null) {
+            return null;
+        }
+
+        // 쿠키 배열에서 찾기
+        for (Cookie cookie : cookies) {
+            if (cookieName.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * SameSite 속성을 포함한 쿠키 추가
+     *
+     * @param response HTTP 응답
+     * @param name     쿠키 이름
+     * @param value    쿠키 값
+     * @param maxAge   만료 시간 (초), 0이면 쿠키 삭제
+     */
+    private void addCookieWithSameSite(
+            HttpServletResponse response,
+            String name,
+            String value,
+            int maxAge) {
+        String cookieValue = String.format(
+                "%s=%s; Max-Age=%d; Path=/; Domain=%s; HttpOnly; Secure; SameSite=Lax",
+                name,
+                value,
+                maxAge,
+                cookieDomain);
+
+        response.addHeader("Set-Cookie", cookieValue);
     }
 }

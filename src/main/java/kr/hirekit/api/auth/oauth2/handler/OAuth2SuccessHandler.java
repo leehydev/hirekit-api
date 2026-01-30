@@ -14,6 +14,10 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * OAuth2 로그인 성공 시 처리하는 핸들러
+ * JWT 토큰을 HttpOnly 쿠키에 저장 후 프론트엔드로 리다이렉트
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -21,9 +25,17 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    // application.yml에서 주입
     @Value("${app.frontend-url}")
     private String frontendUrl;
+
+    @Value("${app.cookie-domain}")
+    private String cookieDomain;
+
+    @Value("${jwt.access-token-expiry}")
+    private long accessTokenExpiry;
+
+    @Value("${jwt.refresh-token-expiry}")
+    private long refreshTokenExpiry;
 
     @Override
     public void onAuthenticationSuccess(
@@ -31,19 +43,50 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             HttpServletResponse response,
             Authentication authentication) throws IOException {
 
+        // 1. 인증된 사용자 정보 가져오기
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         UUID memberId = oAuth2User.getMemberId();
 
         log.info("OAuth2 로그인 성공 - 회원 ID: {}", memberId);
-        // JWT 토큰 생성
+
+        // 2. JWT 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(memberId);
         String refreshToken = jwtTokenProvider.createRefreshToken(memberId);
 
-        // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
-        String redirectUrl = frontendUrl + "/oauth/callback"
-                + "?accessToken=" + accessToken
-                + "&refreshToken=" + refreshToken;
+        // 3. 쿠키에 토큰 저장 (SameSite=Lax 포함)
+        addCookieWithSameSite(response, "accessToken", accessToken, (int) (accessTokenExpiry / 1000));
+        addCookieWithSameSite(response, "refreshToken", refreshToken, (int) (refreshTokenExpiry / 1000));
 
-        response.sendRedirect(redirectUrl);
+        // 4. 프론트엔드로 리다이렉트
+        response.sendRedirect(frontendUrl + "/oauth/callback");
+    }
+
+    /**
+     * SameSite 속성을 포함한 쿠키 추가
+     * Java Cookie 클래스가 SameSite를 지원 안 해서 헤더로 직접 작성
+     *
+     * @param response HTTP 응답 객체
+     * @param name     쿠키 이름
+     * @param value    쿠키 값 (토큰)
+     * @param maxAge   만료 시간 (초)
+     */
+    private void addCookieWithSameSite(
+            HttpServletResponse response,
+            String name,
+            String value,
+            int maxAge) {
+        // Set-Cookie 헤더 형식으로 직접 작성
+        // 예: accessToken=xxx; Max-Age=1800; Path=/; Domain=.hirekit-dev.kr; HttpOnly;
+        // Secure; SameSite=Lax
+        String cookieValue = String.format(
+                "%s=%s; Max-Age=%d; Path=/; Domain=%s; HttpOnly; Secure; SameSite=Lax",
+                name, // 쿠키 이름
+                value, // 쿠키 값
+                maxAge, // 만료 시간 (초)
+                cookieDomain // 도메인 (.hirekit-dev.kr)
+        );
+
+        // 응답 헤더에 추가
+        response.addHeader("Set-Cookie", cookieValue);
     }
 }

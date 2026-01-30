@@ -1,3 +1,5 @@
+server:
+  forward-headers-strategy: native
 spring:
   application:
     name: hirekit-api
@@ -28,7 +30,6 @@ spring:
             scope:
               - profile_nickname
               - profile_image
-              - account_email
         # 카카오 엔드포인트 정보
         provider:
           kakao:
@@ -42,6 +43,7 @@ spring:
             user-name-attribute: id
 app:
   frontend-url: ${FRONTEND_URL}
+  cookie-domain: ${COOKIE_DOMAIN}
 # JWT 설정
 jwt:
   secret: ${JWT_SECRET}
