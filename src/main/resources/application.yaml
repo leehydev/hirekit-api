@@ -44,6 +44,8 @@ spring:
 app:
   frontend-url: ${FRONTEND_URL}
   cookie-domain: ${COOKIE_DOMAIN}
+public-data:
+  service-key: ${PUBLIC_DATA_SERVICE_KEY}
 # JWT 설정
 jwt:
   secret: ${JWT_SECRET}
