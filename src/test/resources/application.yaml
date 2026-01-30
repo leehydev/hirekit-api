@@ -41,3 +41,5 @@ jwt:
   secret: test-jwt-secret-key-for-testing-purposes-only-1234567890
   access-token-expiry: 1800000
   refresh-token-expiry: 604800000
+public-data:
+  service-key: ${PUBLIC_DATA_SERVICE_KEY}
