@@ -21,7 +21,7 @@ spring:
             # 인가 코드 방식
             authorization-grant-type: authorization_code
             # 인가 코드 받을 URI
-            redirect-uri: ${KAKAO_REDIRECT_URI}
+            redirect-uri: ${API_URL}/login/oauth2/code/kakao
             # 인증 방식
             client-authentication-method: client_secret_post
             # 요청 권한
@@ -40,3 +40,10 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             # 사용자 ID 필드명
             user-name-attribute: id
+app:
+  frontend-url: ${FRONTEND_URL}
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiry: 1800000 # 30분 (밀리초)
+  refresh-token-expiry: 604800000 # 7일 (밀리초)
