@@ -15,11 +15,12 @@ public class PublicDataClient {
     /**
      * 공공데이터 API GET 요청
      *
-     * @param path 엔드포인트 경로 (예: "/B552584/ArpltnInforInqireSvc/...")
+     * @param path            엔드포인트 경로 (예: "/B552584/ArpltnInforInqireSvc/...")
      * @param queryCustomizer 추가 쿼리 파라미터 설정
-     * @return 응답 JSON 문자열
+     * @return 응답 문자열
      */
-    public String get(String path, java.util.function.Consumer<org.springframework.web.util.UriBuilder> queryCustomizer) {
+    public String get(String path,
+            java.util.function.Consumer<org.springframework.web.util.UriBuilder> queryCustomizer) {
         return publicDataWebClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.path(path)
@@ -30,5 +31,24 @@ public class PublicDataClient {
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
+    }
+
+    /**
+     * 기업 개요 조회 (금융위원회 기업기본정보 V2)
+     *
+     * @param crno   법인등록번호
+     * @param corpNm 법인명
+     * @return API 응답 문자열
+     */
+    public String getCorpOutline(String crno, String corpNm) {
+        return get("/1160100/service/GetCorpBasicInfoService_V2/getCorpOutline_V2", uri -> {
+            uri.queryParam("resultType", "json")
+                    .queryParam("pageNo", 1)
+                    .queryParam("numOfRows", 5);
+            if (crno != null)
+                uri.queryParam("crno", crno);
+            if (corpNm != null)
+                uri.queryParam("corpNm", corpNm);
+        });
     }
 }
