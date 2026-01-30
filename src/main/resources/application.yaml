@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: hirekit-api
+  profiles:
+    active: local
+  jpa:
+    show-sql: false
+  flyway:
+    locations: classpath:db/migration

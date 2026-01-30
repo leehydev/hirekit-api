@@ -1,0 +1,16 @@
+# 로컬 개발용 설정 예시
+# 이 파일을 application-local.yaml 로 복사한 뒤 값을 채워 사용하세요.
+# application-local.yaml 은 .gitignore 에 포함되어 커밋되지 않습니다.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hirekit
+    driver-class-name: org.postgresql.Driver
+    username: hirekit
+    password: your_password_here
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  flyway:
+    enabled: true
