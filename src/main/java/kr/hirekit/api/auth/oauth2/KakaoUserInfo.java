@@ -34,7 +34,7 @@ public class KakaoUserInfo implements OAuth2UserInfo {
             KakaoAccount kakaoAccount = mapper.convertValue(kakaoAccountObj, KakaoAccount.class);
             if (kakaoAccount.profile() != null) {
                 tempNickname = kakaoAccount.profile().nickname();
-                tempProfileImage = kakaoAccount.profile().profileImageUrl();
+                tempProfileImage = kakaoAccount.profile().thumbnail_image_url();
             }
         }
 
@@ -70,6 +70,6 @@ public class KakaoUserInfo implements OAuth2UserInfo {
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoProfile(
             String nickname,
-            String profileImageUrl) {
+            String thumbnail_image_url) {
     }
 }

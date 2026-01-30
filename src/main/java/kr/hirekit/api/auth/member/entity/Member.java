@@ -32,9 +32,10 @@ public class Member extends BaseEntity {
 
     // 빌더 패턴으로 객체 생성
     @Builder
-    public Member(String email, String nickname) {
+    public Member(String email, String nickname, String profileImage) {
         this.email = email;
         this.nickname = nickname;
+        this.profileImage = profileImage;
         this.status = MemberStatus.PENDING;
     }
 

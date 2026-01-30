@@ -96,6 +96,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         Member newMember = Member.builder()
                 .email(generateTempEmail(provider, providerId))
                 .nickname(userInfo.getNickname() != null ? userInfo.getNickname() : "회원")
+                .profileImage(userInfo.getProfileImage())
                 .build();
 
         memberRepository.save(newMember);
