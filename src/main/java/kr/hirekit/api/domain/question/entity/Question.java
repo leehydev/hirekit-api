@@ -63,4 +63,21 @@ public class Question extends BaseEntity {
      */
     @Column(name = "forced_private", nullable = false)
     private boolean forcedPrivate;
+
+    /**
+     * 질문 내용·직무·공개여부·작성자숨김 수정. (답변이 없을 때만 호출)
+     */
+    public void update(Job job, String content, QuestionVisibility visibility, boolean authorHidden) {
+        this.job = job;
+        this.content = content;
+        this.visibility = visibility;
+        this.authorHidden = authorHidden;
+    }
+
+    /**
+     * 질문 공개상태만 변경. (답변이 없을 때만 호출)
+     */
+    public void updateVisibility(QuestionVisibility visibility) {
+        this.visibility = visibility;
+    }
 }

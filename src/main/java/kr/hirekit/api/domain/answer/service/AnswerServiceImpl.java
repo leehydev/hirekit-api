@@ -33,7 +33,8 @@ public class AnswerServiceImpl implements AnswerService {
     @Override
     @Transactional
     public AnswerDetailResponse createAnswer(UUID questionId, AnswerCreateRequest request, UUID memberId) {
-        Question question = questionRepository.findById(questionId)
+        // 질문 행 락: 삭제/수정과 동시에 답변 등록 시 레이스 방지
+        Question question = questionRepository.findByIdForUpdate(questionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
         Member author = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));

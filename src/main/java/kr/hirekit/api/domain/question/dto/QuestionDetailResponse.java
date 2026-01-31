@@ -18,6 +18,7 @@ public class QuestionDetailResponse extends BaseResponse {
 
     private UUID companyId;
     private String companyName;
+    private UUID authorId;
     private Job job;
     private String content;
     private boolean authorHidden;
@@ -25,10 +26,12 @@ public class QuestionDetailResponse extends BaseResponse {
 
     @Builder
     public QuestionDetailResponse(UUID id, LocalDateTime createdAt, LocalDateTime updatedAt,
-            UUID companyId, String companyName, Job job, String content, boolean authorHidden, QuestionVisibility visibility) {
+            UUID companyId, String companyName, UUID authorId, Job job, String content, boolean authorHidden,
+            QuestionVisibility visibility) {
         super(id, createdAt, updatedAt);
         this.companyId = companyId;
         this.companyName = companyName;
+        this.authorId = authorId;
         this.job = job;
         this.content = content;
         this.authorHidden = authorHidden;
@@ -42,6 +45,7 @@ public class QuestionDetailResponse extends BaseResponse {
                 .updatedAt(q.getUpdatedAt())
                 .companyId(q.getCompany().getId())
                 .companyName(q.getCompany().getName())
+                .authorId(q.getAuthor().getId())
                 .job(q.getJob())
                 .content(q.getContent())
                 .authorHidden(q.isAuthorHidden())

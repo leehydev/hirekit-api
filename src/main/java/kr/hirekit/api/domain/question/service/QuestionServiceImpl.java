@@ -25,6 +25,8 @@ import kr.hirekit.api.domain.company.repository.CompanyRepository;
 import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
+import kr.hirekit.api.domain.question.dto.QuestionUpdateRequest;
+import kr.hirekit.api.domain.question.dto.QuestionVisibilityUpdateRequest;
 import kr.hirekit.api.domain.question.entity.Question;
 import kr.hirekit.api.domain.question.entity.QuestionVisibility;
 import kr.hirekit.api.domain.question.repository.QuestionRepository;
@@ -143,5 +145,50 @@ public class QuestionServiceImpl implements QuestionService {
                 .getOrDefault(questionId, Map.of())
                 .getOrDefault(AnswerVisibility.MEMBERS_ONLY, 0L);
         return MembersOnlyAnswerCountResponse.of(membersOnlyCount);
+    }
+
+    @Override
+    @Transactional
+    public QuestionDetailResponse updateQuestion(UUID id, QuestionUpdateRequest request, UUID memberId) {
+        Question question = questionRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
+        if (!question.getAuthor().getId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if (answerRepository.existsByQuestion_Id(id)) {
+            throw new BusinessException(ErrorCode.QUESTION_HAS_ANSWERS);
+        }
+        question.update(request.getJob(), request.getContent(), request.getVisibility(), request.isAuthorHidden());
+        return QuestionDetailResponse.from(question);
+    }
+
+    @Override
+    @Transactional
+    public void deleteQuestion(UUID id, UUID memberId) {
+        Question question = questionRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
+        if (!question.getAuthor().getId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if (answerRepository.existsByQuestion_Id(id)) {
+            throw new BusinessException(ErrorCode.QUESTION_HAS_ANSWERS);
+        }
+        questionRepository.delete(question);
+    }
+
+    @Override
+    @Transactional
+    public QuestionDetailResponse updateQuestionVisibility(UUID id, QuestionVisibilityUpdateRequest request,
+            UUID memberId) {
+        Question question = questionRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
+        if (!question.getAuthor().getId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if (answerRepository.existsByQuestion_Id(id)) {
+            throw new BusinessException(ErrorCode.QUESTION_HAS_ANSWERS);
+        }
+        question.updateVisibility(request.getVisibility());
+        return QuestionDetailResponse.from(question);
     }
 }
