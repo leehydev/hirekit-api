@@ -2,7 +2,8 @@ package kr.hirekit.api.domain.question.service;
 
 import java.util.UUID;
 
-import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
+import kr.hirekit.api.common.dto.CursorPageResponse;
+import kr.hirekit.api.domain.answer.dto.AnswerListItemResponse;
 import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
@@ -46,7 +47,7 @@ public interface QuestionService {
      * @return 답변 목록 + nextCursor
      * @throws kr.hirekit.api.common.exception.BusinessException 질문이 없거나 조회 권한이 없을 때 QUESTION_NOT_FOUND
      */
-    CursorAnswerListResponse getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor, Integer size);
+    CursorPageResponse<AnswerListItemResponse> getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor, Integer size);
 
     /**
      * 특정 질문의 회원 전용 답변 수 조회 (public API).

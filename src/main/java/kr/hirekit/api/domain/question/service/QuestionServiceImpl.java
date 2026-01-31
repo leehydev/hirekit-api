@@ -15,7 +15,7 @@ import kr.hirekit.api.common.dto.ErrorCode;
 import kr.hirekit.api.common.exception.BusinessException;
 import kr.hirekit.api.domain.answer.dto.AnswerCursor;
 import kr.hirekit.api.domain.answer.dto.AnswerListItemResponse;
-import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
+import kr.hirekit.api.common.dto.CursorPageResponse;
 import kr.hirekit.api.domain.answer.entity.Answer;
 import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
@@ -87,7 +87,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public CursorAnswerListResponse getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor,
+    public CursorPageResponse<AnswerListItemResponse> getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor,
             Integer size) {
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
@@ -108,7 +108,7 @@ public class QuestionServiceImpl implements QuestionService {
                 questionId, allowedVisibilities, memberId, cursorCreatedAt, cursorId, PageRequest.of(0, pageSize));
 
         if (answers.isEmpty()) {
-            return CursorAnswerListResponse.builder().items(List.of()).nextCursor(null).build();
+            return CursorPageResponse.<AnswerListItemResponse>builder().items(List.of()).nextCursor(null).build();
         }
 
         List<UUID> answerIds = answers.stream().map(Answer::getId).toList();
@@ -123,7 +123,7 @@ public class QuestionServiceImpl implements QuestionService {
                 ? AnswerCursor.encode(last.getCreatedAt(), last.getId())
                 : null;
 
-        return CursorAnswerListResponse.builder()
+        return CursorPageResponse.<AnswerListItemResponse>builder()
                 .items(items)
                 .nextCursor(nextCursor)
                 .build();

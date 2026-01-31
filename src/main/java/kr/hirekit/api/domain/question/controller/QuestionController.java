@@ -22,7 +22,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
+import kr.hirekit.api.common.dto.CursorPageResponse;
+import kr.hirekit.api.domain.answer.dto.AnswerListItemResponse;
 import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
@@ -122,7 +123,7 @@ public class QuestionController {
             @ApiResponse(responseCode = "404", description = "질문을 찾을 수 없음(비공개/강제비공개 포함)")
     })
     @GetMapping("/{id}/answers")
-    public ResponseEntity<CursorAnswerListResponse> getAnswersByQuestionId(
+    public ResponseEntity<CursorPageResponse<AnswerListItemResponse>> getAnswersByQuestionId(
             @Parameter(description = "질문 ID (UUID)", required = true) @PathVariable("id") UUID id,
             @Parameter(description = "다음 페이지 커서 (첫 요청 시 생략)") @RequestParam(name = "cursor", required = false) String cursor,
             @Parameter(description = "페이지 크기 (기본 20, 최대 50)") @RequestParam(name = "size", required = false, defaultValue = "20") Integer size,
