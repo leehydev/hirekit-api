@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,9 +39,8 @@ public class FeedController {
             @Parameter(description = "직무 필터 (Job enum 이름, 예: BACKEND, FRONTEND. 미입력 시 전체)") @RequestParam(name = "job", required = false) String jobParam,
             @Parameter(description = "다음 페이지 커서 (첫 요청 시 생략, 이전 응답의 nextCursor 전달)") @RequestParam(name = "cursor", required = false, defaultValue = "null") String cursor,
             @Parameter(description = "페이지 크기 (기본 , 최대 50)") @RequestParam(name = "size", required = false, defaultValue = "20") Integer size,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal UUID memberId) {
 
-        UUID memberId = userDetails != null ? UUID.fromString(userDetails.getUsername()) : null;
         UUID companyId = companyUuid != null ? UUID.fromString(companyUuid) : null;
         Job job = parseJob(jobParam);
         CursorFeedResponse feed = feedService.getFeed(companyId, memberId, job, cursor, size);

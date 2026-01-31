@@ -5,7 +5,6 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,8 +43,7 @@ public class QuestionController {
     @PostMapping
     public ResponseEntity<QuestionDetailResponse> createQuestion(
             @RequestBody @Valid QuestionCreateRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        UUID memberId = UUID.fromString(userDetails.getUsername());
+            @AuthenticationPrincipal UUID memberId) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(questionService.createQuestion(request, memberId));
     }
@@ -72,8 +70,7 @@ public class QuestionController {
             @Parameter(description = "질문 ID (UUID)", required = true) @PathVariable("id") UUID id,
             @Parameter(description = "다음 페이지 커서 (첫 요청 시 생략)") @RequestParam(name = "cursor", required = false) String cursor,
             @Parameter(description = "페이지 크기 (기본 20, 최대 50)") @RequestParam(name = "size", required = false, defaultValue = "20") Integer size,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        UUID memberId = userDetails != null ? UUID.fromString(userDetails.getUsername()) : null;
+            @AuthenticationPrincipal UUID memberId) {
         return ResponseEntity.ok(questionService.getAnswersByQuestionId(id, memberId, cursor, size));
     }
 }

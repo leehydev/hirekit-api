@@ -6,7 +6,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,8 +51,7 @@ public class CompanyController {
     @PostMapping
     public ResponseEntity<CompanyResponse> register(
             @RequestBody @Valid CompanyCreateRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        UUID memberId = UUID.fromString(userDetails.getUsername());
+            @AuthenticationPrincipal UUID memberId) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(companyService.createCompany(request, memberId));
     }
