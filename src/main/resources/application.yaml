@@ -5,6 +5,11 @@ spring:
     name: hirekit-api
   profiles:
     active: local
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   jpa:
     show-sql: false
   flyway:
@@ -44,6 +49,10 @@ spring:
 app:
   frontend-url: ${FRONTEND_URL}
   cookie-domain: ${COOKIE_DOMAIN}
+  redis:
+    key-prefix: ${REDIS_KEY_PREFIX:}
+public-data:
+  service-key: ${PUBLIC_DATA_SERVICE_KEY}
 # JWT 설정
 jwt:
   secret: ${JWT_SECRET}
