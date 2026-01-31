@@ -1,5 +1,8 @@
 package kr.hirekit.api.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import kr.hirekit.api.client.dto.CorpOutlineApiResponse;
 import kr.hirekit.api.config.PublicDataProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -11,6 +14,7 @@ public class PublicDataClient {
 
     private final WebClient publicDataWebClient;
     private final PublicDataProperties properties;
+    private final ObjectMapper objectMapper;
 
     /**
      * 공공데이터 API GET 요청
@@ -38,10 +42,10 @@ public class PublicDataClient {
      *
      * @param crno   법인등록번호
      * @param corpNm 법인명
-     * @return API 응답 문자열
+     * @return API 응답 (타입 정의됨)
      */
-    public String getCorpOutline(String crno, String corpNm) {
-        return get("/1160100/service/GetCorpBasicInfoService_V2/getCorpOutline_V2", uri -> {
+    public CorpOutlineApiResponse getCorpOutline(String crno, String corpNm) {
+        String json = get("/1160100/service/GetCorpBasicInfoService_V2/getCorpOutline_V2", uri -> {
             uri.queryParam("resultType", "json")
                     .queryParam("pageNo", 1)
                     .queryParam("numOfRows", 5);
@@ -50,5 +54,10 @@ public class PublicDataClient {
             if (corpNm != null)
                 uri.queryParam("corpNm", corpNm);
         });
+        try {
+            return objectMapper.readValue(json, CorpOutlineApiResponse.class);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new RuntimeException("기업개요 API 응답 파싱 실패", e);
+        }
     }
 }
