@@ -8,6 +8,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import kr.hirekit.api.auth.member.entity.Member;
+import kr.hirekit.api.auth.member.repository.MemberRepository;
 import kr.hirekit.api.common.dto.ErrorCode;
 import kr.hirekit.api.common.exception.BusinessException;
 import kr.hirekit.api.domain.answer.dto.AnswerCursor;
@@ -16,6 +18,9 @@ import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
 import kr.hirekit.api.domain.answer.entity.Answer;
 import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
+import kr.hirekit.api.domain.company.entity.Company;
+import kr.hirekit.api.domain.company.repository.CompanyRepository;
+import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
 import kr.hirekit.api.domain.question.entity.Question;
 import kr.hirekit.api.domain.question.entity.QuestionVisibility;
@@ -32,6 +37,28 @@ public class QuestionServiceImpl implements QuestionService {
 
     private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
+    private final CompanyRepository companyRepository;
+    private final MemberRepository memberRepository;
+
+    @Override
+    @Transactional
+    public QuestionDetailResponse createQuestion(QuestionCreateRequest request, UUID memberId) {
+        Company company = companyRepository.findById(request.getCompanyId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
+        Member author = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        Question question = questionRepository.save(Question.builder()
+                .company(company)
+                .job(request.getJob())
+                .content(request.getContent())
+                .author(author)
+                .visibility(request.getVisibility())
+                .authorHidden(request.isAuthorHidden())
+                .forcedPrivate(false)
+                .build());
+        return QuestionDetailResponse.from(question);
+    }
 
     @Override
     public QuestionDetailResponse getQuestion(UUID id) {
