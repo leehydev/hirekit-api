@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
+import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
 import kr.hirekit.api.domain.question.service.QuestionService;
@@ -72,5 +73,17 @@ public class QuestionController {
             @Parameter(description = "페이지 크기 (기본 20, 최대 50)") @RequestParam(name = "size", required = false, defaultValue = "20") Integer size,
             @AuthenticationPrincipal UUID memberId) {
         return ResponseEntity.ok(questionService.getAnswersByQuestionId(id, memberId, cursor, size));
+    }
+
+    @Operation(summary = "회원 전용 답변 수 조회", description = "특정 질문의 회원 전용(MEMBERS_ONLY) 답변 수. 회원이면 0, 비회원이면 회원 전용 답변 수. public API.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "질문을 찾을 수 없음(비공개/강제비공개 포함)")
+    })
+    @GetMapping("/{id}/answers/members-only-count")
+    public ResponseEntity<MembersOnlyAnswerCountResponse> getMembersOnlyAnswerCount(
+            @Parameter(description = "질문 ID (UUID)", required = true) @PathVariable("id") UUID id,
+            @AuthenticationPrincipal UUID memberId) {
+        return ResponseEntity.ok(questionService.getMembersOnlyAnswerCount(id, memberId));
     }
 }

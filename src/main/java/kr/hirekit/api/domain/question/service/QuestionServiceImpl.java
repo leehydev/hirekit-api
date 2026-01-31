@@ -1,6 +1,7 @@
 package kr.hirekit.api.domain.question.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
 import kr.hirekit.api.domain.company.entity.Company;
 import kr.hirekit.api.domain.company.repository.CompanyRepository;
+import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
 import kr.hirekit.api.domain.question.entity.Question;
@@ -112,5 +114,22 @@ public class QuestionServiceImpl implements QuestionService {
                 .items(items)
                 .nextCursor(nextCursor)
                 .build();
+    }
+
+    @Override
+    public MembersOnlyAnswerCountResponse getMembersOnlyAnswerCount(UUID questionId, UUID memberId) {
+        if (memberId != null) {
+            return MembersOnlyAnswerCountResponse.of(0L);
+        }
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
+        if (question.getVisibility() != QuestionVisibility.PUBLIC || question.isForcedPrivate()) {
+            throw new BusinessException(ErrorCode.QUESTION_NOT_FOUND);
+        }
+        var countByVisibility = answerRepository.countByQuestionIdGroupByVisibility(List.of(questionId));
+        long membersOnlyCount = countByVisibility
+                .getOrDefault(questionId, Map.of())
+                .getOrDefault(AnswerVisibility.MEMBERS_ONLY, 0L);
+        return MembersOnlyAnswerCountResponse.of(membersOnlyCount);
     }
 }
