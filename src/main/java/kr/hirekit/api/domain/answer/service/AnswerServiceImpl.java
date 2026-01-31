@@ -11,7 +11,10 @@ import kr.hirekit.api.common.dto.ErrorCode;
 import kr.hirekit.api.common.exception.BusinessException;
 import kr.hirekit.api.domain.answer.dto.AnswerCreateRequest;
 import kr.hirekit.api.domain.answer.dto.AnswerDetailResponse;
+import kr.hirekit.api.domain.answer.dto.AnswerLikeToggleResponse;
 import kr.hirekit.api.domain.answer.entity.Answer;
+import kr.hirekit.api.domain.answer.entity.AnswerLike;
+import kr.hirekit.api.domain.answer.repository.AnswerLikeRepository;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
 import kr.hirekit.api.domain.question.entity.Question;
 import kr.hirekit.api.domain.question.repository.QuestionRepository;
@@ -23,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class AnswerServiceImpl implements AnswerService {
 
     private final AnswerRepository answerRepository;
+    private final AnswerLikeRepository answerLikeRepository;
     private final QuestionRepository questionRepository;
     private final MemberRepository memberRepository;
 
@@ -46,5 +50,35 @@ public class AnswerServiceImpl implements AnswerService {
                 .forcedPrivate(false)
                 .build());
         return AnswerDetailResponse.from(answer);
+    }
+
+    @Override
+    @Transactional
+    public AnswerLikeToggleResponse toggleLike(UUID questionId, UUID answerId, UUID memberId) {
+        Answer answer = answerRepository.findById(answerId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANSWER_NOT_FOUND));
+        if (!answer.getQuestion().getId().equals(questionId)) {
+            throw new BusinessException(ErrorCode.ANSWER_NOT_FOUND);
+        }
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        boolean liked;
+        var existing = answerLikeRepository.findByAnswerIdAndMemberId(answerId, memberId);
+        if (existing.isPresent()) {
+            answerLikeRepository.delete(existing.get());
+            liked = false;
+        } else {
+            answerLikeRepository.save(AnswerLike.builder()
+                    .answer(answer)
+                    .member(member)
+                    .build());
+            liked = true;
+        }
+        long likeCount = answerLikeRepository.countByAnswerId(answerId);
+        return AnswerLikeToggleResponse.builder()
+                .liked(liked)
+                .likeCount(likeCount)
+                .build();
     }
 }

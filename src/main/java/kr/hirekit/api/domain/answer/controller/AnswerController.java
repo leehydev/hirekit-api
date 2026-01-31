@@ -19,10 +19,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.hirekit.api.domain.answer.dto.AnswerCreateRequest;
 import kr.hirekit.api.domain.answer.dto.AnswerDetailResponse;
+import kr.hirekit.api.domain.answer.dto.AnswerLikeToggleResponse;
 import kr.hirekit.api.domain.answer.service.AnswerService;
 import lombok.RequiredArgsConstructor;
 
-@Tag(name = "답변", description = "답변 등록 API")
+@Tag(name = "답변", description = "답변 등록 및 좋아요 API")
 @RestController
 @RequestMapping("/api/questions")
 @RequiredArgsConstructor
@@ -44,5 +45,19 @@ public class AnswerController {
             @AuthenticationPrincipal UUID memberId) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(answerService.createAnswer(questionId, request, memberId));
+    }
+
+    @Operation(summary = "답변 좋아요 토글", description = "로그인한 회원이 특정 답변에 좋아요를 누르거나 취소합니다. 이미 좋아요 상태면 취소, 아니면 추가됩니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "토글 성공"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "404", description = "질문/답변/회원을 찾을 수 없음")
+    })
+    @PostMapping("/{questionId}/answers/{answerId}/like")
+    public ResponseEntity<AnswerLikeToggleResponse> toggleLike(
+            @Parameter(description = "질문 ID (UUID)", required = true) @PathVariable("questionId") UUID questionId,
+            @Parameter(description = "답변 ID (UUID)", required = true) @PathVariable("answerId") UUID answerId,
+            @AuthenticationPrincipal UUID memberId) {
+        return ResponseEntity.ok(answerService.toggleLike(questionId, answerId, memberId));
     }
 }
