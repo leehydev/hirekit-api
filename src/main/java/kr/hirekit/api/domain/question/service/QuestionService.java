@@ -3,12 +3,24 @@ package kr.hirekit.api.domain.question.service;
 import java.util.UUID;
 
 import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
+import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
 
 /**
- * 질문 조회 서비스.
+ * 질문 조회 및 등록 서비스.
  */
 public interface QuestionService {
+
+    /**
+     * 질문 등록.
+     * 로그인한 회원이 작성자로 저장된다.
+     *
+     * @param request  등록 요청 (기업 ID, 직무, 내용, 공개 여부, 작성자 숨김 여부)
+     * @param memberId 작성자 회원 ID
+     * @return 등록된 질문 상세
+     * @throws kr.hirekit.api.common.exception.BusinessException 기업/회원이 없을 때 COMPANY_NOT_FOUND, MEMBER_NOT_FOUND
+     */
+    QuestionDetailResponse createQuestion(QuestionCreateRequest request, UUID memberId);
 
     /**
      * 질문 단건 조회.
