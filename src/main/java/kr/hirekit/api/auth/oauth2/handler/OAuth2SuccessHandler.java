@@ -1,9 +1,11 @@
 package kr.hirekit.api.auth.oauth2.handler;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import kr.hirekit.api.auth.jwt.JwtTokenProvider;
 import kr.hirekit.api.auth.oauth2.CustomOAuth2User;
+import kr.hirekit.api.auth.oauth2.filter.OAuth2ReturnToFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +14,9 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.UUID;
 
 /**
@@ -57,8 +62,39 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         addCookieWithSameSite(response, "accessToken", accessToken, (int) (accessTokenExpiry / 1000));
         addCookieWithSameSite(response, "refreshToken", refreshToken, (int) (refreshTokenExpiry / 1000));
 
-        // 4. 프론트엔드로 리다이렉트
-        response.sendRedirect(frontendUrl + "/oauth/callback");
+        // 4. return_to 쿠키가 있으면 리다이렉트 URL에 포함 후 쿠키 삭제
+        String redirectUrl = buildCallbackRedirectUrl(request, response);
+
+        // 5. 프론트엔드로 리다이렉트
+        response.sendRedirect(redirectUrl);
+    }
+
+    private String buildCallbackRedirectUrl(HttpServletRequest request, HttpServletResponse response) {
+        String base = frontendUrl + "/oauth/callback";
+        String returnTo = getReturnToFromCookie(request);
+        if (returnTo == null || returnTo.isBlank()) {
+            return base;
+        }
+        clearReturnToCookie(response);
+        return base + "?return_to=" + URLEncoder.encode(returnTo, StandardCharsets.UTF_8);
+    }
+
+    private String getReturnToFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return null;
+        return Arrays.stream(cookies)
+                .filter(c -> OAuth2ReturnToFilter.COOKIE_NAME.equals(c.getName()))
+                .map(Cookie::getValue)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void clearReturnToCookie(HttpServletResponse response) {
+        String cookieValue = String.format(
+                "%s=; Max-Age=0; Path=/; Domain=%s; SameSite=Lax; Secure; HttpOnly",
+                OAuth2ReturnToFilter.COOKIE_NAME, cookieDomain
+        );
+        response.addHeader("Set-Cookie", cookieValue);
     }
 
     /**
