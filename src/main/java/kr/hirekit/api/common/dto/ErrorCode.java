@@ -24,6 +24,7 @@ public enum ErrorCode {
     CONFLICT("CONFLICT", "이미 존재하는 데이터입니다.", HttpStatus.CONFLICT),
     COMPANY_NOT_FOUND("COMPANY_NOT_FOUND", "기업을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    QUESTION_NOT_FOUND("QUESTION_NOT_FOUND", "질문을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     // 5xx
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
 
