@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hirekit.api.domain.feed.dto.CursorFeedResponse;
 import kr.hirekit.api.domain.feed.service.FeedService;
+import kr.hirekit.api.domain.question.entity.Job;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "피드", description = "피드 조회 API (질문 + 대표 답변 1개, 권한별 답변 수)")
@@ -35,14 +36,27 @@ public class FeedController {
     })
     @GetMapping
     public ResponseEntity<CursorFeedResponse> getFeed(
-            @Parameter(description = "회사 ID 필터 (미입력 시 전체)") @RequestParam(name = "companyId", required = false) String companyId,
+            @Parameter(description = "회사 ID 필터 (미입력 시 전체)") @RequestParam(name = "companyId", required = false) String companyUuid,
+            @Parameter(description = "직무 필터 (Job enum 이름, 예: BACKEND, FRONTEND. 미입력 시 전체)") @RequestParam(name = "job", required = false) String jobParam,
             @Parameter(description = "다음 페이지 커서 (첫 요청 시 생략, 이전 응답의 nextCursor 전달)") @RequestParam(name = "cursor", required = false, defaultValue = "null") String cursor,
             @Parameter(description = "페이지 크기 (기본 , 최대 50)") @RequestParam(name = "size", required = false, defaultValue = "20") Integer size,
             @AuthenticationPrincipal UserDetails userDetails) {
 
         UUID memberId = userDetails != null ? UUID.fromString(userDetails.getUsername()) : null;
-        UUID companyUuid = companyId != null ? UUID.fromString(companyId) : null;
-        CursorFeedResponse feed = feedService.getFeed(companyUuid, memberId, cursor, size);
+        UUID companyId = companyUuid != null ? UUID.fromString(companyUuid) : null;
+        Job job = parseJob(jobParam);
+        CursorFeedResponse feed = feedService.getFeed(companyId, memberId, job, cursor, size);
         return ResponseEntity.ok(feed);
+    }
+
+    private static Job parseJob(String jobParam) {
+        if (jobParam == null || jobParam.isBlank()) {
+            return null;
+        }
+        try {
+            return Job.valueOf(jobParam.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

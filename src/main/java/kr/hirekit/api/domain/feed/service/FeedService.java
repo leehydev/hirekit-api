@@ -1,5 +1,6 @@
 package kr.hirekit.api.domain.feed.service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import kr.hirekit.api.domain.feed.dto.FeedAnswerSummary;
 import kr.hirekit.api.domain.feed.dto.FeedCursor;
 import kr.hirekit.api.domain.feed.dto.FeedItemResponse;
 import kr.hirekit.api.domain.feed.dto.FeedQuestionSummary;
+import kr.hirekit.api.domain.question.entity.Job;
 import kr.hirekit.api.domain.question.entity.Question;
 import kr.hirekit.api.domain.question.entity.QuestionVisibility;
 import kr.hirekit.api.domain.question.repository.QuestionRepository;
@@ -36,9 +38,9 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class FeedService {
 
-    /** 요청 시 size 미지정 시 사용하는 기본 페이지 크기 */
+    /** 요청 시 size 미지정 시 사용하는 기본 페이지 크기 (한 번에 가져올 질문 개수) */
     private static final int DEFAULT_PAGE_SIZE = 20;
-    /** 한 번에 조회할 수 있는 최대 개수 (과부하 방지) */
+    /** 한 번에 조회할 수 있는 최대 개수. 이 값을 넘는 size 요청은 이 값으로 제한되어 과부하를 방지한다. */
     private static final int MAX_PAGE_SIZE = 50;
 
     private final QuestionRepository questionRepository;
@@ -53,31 +55,25 @@ public class FeedService {
      *
      * @param companyId 회사 ID 필터 (null이면 전체 회사)
      * @param memberId  로그인한 회원 ID (null이면 비로그인 → 전체공개 답변만 노출)
+     * @param job       직무 필터 (null이면 전체 직무)
      * @param cursor    이전 응답의 nextCursor. 첫 요청이면 null 또는 생략
      * @param size      한 페이지에 가져올 질문 수 (null이면 {@value #DEFAULT_PAGE_SIZE}, 최대 {@value #MAX_PAGE_SIZE})
      * @return items와 다음 페이지용 nextCursor (더 없으면 null)
      */
-    public CursorFeedResponse getFeed(UUID companyId, UUID memberId, String cursor, Integer size) {
+    public CursorFeedResponse getFeed(UUID companyId, UUID memberId, Job job, String cursor, Integer size) {
+        // size: null이면 기본값, 1 미만이면 1, MAX 초과면 MAX로 클램프
         int pageSize = size != null ? Math.min(Math.max(1, size), MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
         PageRequest pageRequest = PageRequest.of(0, pageSize);
 
-        // 1) 커서 유무에 따라 질문 목록 조회 (첫 페이지 vs 다음 페이지)
-        List<Question> questions;
+        // ─── 1) 피드용 질문 목록 조회 (QueryDSL 동적 쿼리) ─────────────────────────────
+        // cursor 문자열 파싱: "createdAt_uuid" 형식. 첫 요청이거나 잘못된 값이면 empty → 첫 페이지 조회
         Optional<FeedCursor> parsed = FeedCursor.parse(cursor);
-        if (parsed.isEmpty()) {
-            questions = companyId != null
-                    ? questionRepository.findByVisibilityAndForcedPrivateFalseAndCompanyIdOrderByCreatedAtDescIdDesc(
-                            QuestionVisibility.PUBLIC, companyId, pageRequest)
-                    : questionRepository.findByVisibilityAndForcedPrivateFalseOrderByCreatedAtDescIdDesc(
-                            QuestionVisibility.PUBLIC, pageRequest);
-        } else {
-            FeedCursor c = parsed.get();
-            questions = companyId != null
-                    ? questionRepository.findNextByVisibilityAndForcedPrivateFalseAndCompanyId(
-                            QuestionVisibility.PUBLIC, companyId, c.getCreatedAt(), c.getQuestionId(), pageRequest)
-                    : questionRepository.findNextByVisibilityAndForcedPrivateFalse(
-                            QuestionVisibility.PUBLIC, c.getCreatedAt(), c.getQuestionId(), pageRequest);
-        }
+        LocalDateTime cursorCreatedAt = parsed.map(FeedCursor::getCreatedAt).orElse(null);
+        UUID cursorId = parsed.map(FeedCursor::getQuestionId).orElse(null);
+
+        // visibility=전체공개, forcedPrivate=false. companyId/job은 null이면 필터 미적용. 정렬: createdAt DESC, id DESC
+        List<Question> questions = questionRepository.findFeedQuestions(
+                QuestionVisibility.PUBLIC, companyId, job, cursorCreatedAt, cursorId, pageRequest);
 
         if (questions.isEmpty()) {
             return CursorFeedResponse.builder().items(List.of()).nextCursor(null).build();
@@ -85,16 +81,20 @@ public class FeedService {
 
         List<UUID> questionIds = questions.stream().map(Question::getId).toList();
 
-        // 2) 질문별 대표 답변 1개 + 권한별 답변 수 조회
+        // ─── 2) 질문별 대표 답변 1개 + 권한별 답변 수 조회 ─────────────────────────────
+        // 비로그인: 전체공개 답변만 후보. 로그인: 전체공개 + 회원공개 후보 (대표 답변 선정 시 사용)
         List<AnswerVisibility> allowedVisibilities = memberId != null
                 ? List.of(AnswerVisibility.PUBLIC, AnswerVisibility.MEMBERS_ONLY)
                 : List.of(AnswerVisibility.PUBLIC);
 
+        // 질문당 대표 답변 1개: 좋아요 많은 순 → 동점이면 최신순. allowedVisibilities 내에서만 선정
         Map<UUID, RepresentativeAnswerRow> representativeMap =
                 answerRepository.findRepresentativeAnswersByQuestionIds(questionIds, allowedVisibilities);
+        // 질문별로 visibility(전체공개/회원공개/비공개)마다 답변 개수 → UI에서 "로그인하고 N개 더 보기" 등에 사용
         Map<UUID, Map<AnswerVisibility, Long>> countMap =
                 answerRepository.countByQuestionIdGroupByVisibility(questionIds);
 
+        // 대표 답변으로 선정된 Answer 엔티티만 ID로 한 번에 조회 (N+1 방지)
         List<UUID> representativeAnswerIds = representativeMap.values().stream()
                 .map(RepresentativeAnswerRow::getAnswerId)
                 .distinct()
@@ -104,7 +104,8 @@ public class FeedService {
                 : answerRepository.findAllById(representativeAnswerIds).stream()
                         .collect(java.util.stream.Collectors.toMap(Answer::getId, a -> a));
 
-        // 3) 질문 순서대로 FeedItemResponse 조립 (질문 요약 + 대표 답변 + 답변 수)
+        // ─── 3) 질문 순서대로 FeedItemResponse 조립 ───────────────────────────────────
+        // 각 아이템: 질문 요약 + 대표 답변 요약(없으면 null) + 권한별 답변 수
         List<FeedItemResponse> items = new ArrayList<>();
         for (Question q : questions) {
             FeedQuestionSummary questionSummary = FeedQuestionSummary.from(q);
@@ -126,7 +127,9 @@ public class FeedService {
                     .build());
         }
 
-        // 4) 다음 페이지가 있으면 마지막 질문 기준으로 nextCursor 생성
+        // ─── 4) 다음 페이지 커서 생성 ─────────────────────────────────────────────────
+        // 이번에 요청한 pageSize만큼 다 채워서 왔으면 다음 페이지가 있을 수 있으므로, 마지막 질문 기준으로 nextCursor 부여
+        // 그보다 적게 왔으면 마지막 페이지이므로 nextCursor는 null
         Question last = questions.get(questions.size() - 1);
         String nextCursor = questions.size() == pageSize
                 ? FeedCursor.encode(last.getCreatedAt(), last.getId())
@@ -140,8 +143,11 @@ public class FeedService {
 
     /**
      * visibility별 답변 개수 맵을 FeedAnswerCounts DTO로 변환한다.
+     * <p>
+     * totalAnswerCount는 전체(공개+회원공개+비공개) 합산. API에서는 publicAnswerCount, membersOnlyAnswerCount만
+     * 노출하여 "로그인하면 N개 더 보기" 등 UI 연동에 사용한다.
      *
-     * @param byVisibility visibility → 개수
+     * @param byVisibility visibility → 개수 맵 (없는 key는 0으로 간주)
      * @return totalAnswerCount, publicAnswerCount, membersOnlyAnswerCount 포함
      */
     private static FeedAnswerCounts toFeedAnswerCounts(Map<AnswerVisibility, Long> byVisibility) {

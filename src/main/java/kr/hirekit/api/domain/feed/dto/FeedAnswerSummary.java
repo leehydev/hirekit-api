@@ -26,7 +26,6 @@ public class FeedAnswerSummary {
     private PassStatus passStatus;
     private LocalDate interviewDate;
     private boolean authorHidden;
-    private UUID authorId;
 
     public static FeedAnswerSummary from(Answer a, long likeCount) {
         return FeedAnswerSummary.builder()
@@ -38,7 +37,6 @@ public class FeedAnswerSummary {
                 .passStatus(a.getPassStatus())
                 .interviewDate(a.getInterviewDate())
                 .authorHidden(a.isAuthorHidden())
-                .authorId(a.getAuthor().getId())
                 .build();
     }
 }

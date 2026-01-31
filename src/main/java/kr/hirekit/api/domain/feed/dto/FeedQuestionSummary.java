@@ -26,7 +26,6 @@ public class FeedQuestionSummary {
     private Job job;
     private String content;
     private boolean authorHidden;
-    private UUID authorId;  // authorHidden이 true면 노출 안 할 수 있음
 
     public static FeedQuestionSummary from(Question q) {
         return FeedQuestionSummary.builder()
@@ -38,7 +37,6 @@ public class FeedQuestionSummary {
                 .job(q.getJob())
                 .content(q.getContent())
                 .authorHidden(q.isAuthorHidden())
-                .authorId(q.getAuthor().getId())
                 .build();
     }
 }
