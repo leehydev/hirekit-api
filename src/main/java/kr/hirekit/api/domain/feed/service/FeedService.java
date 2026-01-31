@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import kr.hirekit.api.domain.answer.entity.Answer;
 import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
+import kr.hirekit.api.domain.answer.service.MemberAnswerAccessService;
 import kr.hirekit.api.domain.answer.repository.RepresentativeAnswerRow;
 import kr.hirekit.api.domain.feed.dto.CursorFeedResponse;
 import kr.hirekit.api.domain.feed.dto.FeedAnswerCounts;
@@ -32,6 +33,9 @@ import lombok.RequiredArgsConstructor;
  * <p>
  * 전체공개 질문을 시간 역순으로 보여주며, 질문당 대표 답변 1개(좋아요 많은 순 → 최신순)와
  * 권한별 답변 수를 함께 반환한다. 무한스크롤을 위해 커서 기반 페이지네이션을 사용한다.
+ * <p>
+ * 대표 답변·노출 범위는 "면접 경험 1개 공유 → 모든 면접 정보 열람" 정책에 따라
+ * {@link MemberAnswerAccessService}로 허용 visibility를 결정한 뒤 사용한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -45,13 +49,15 @@ public class FeedService {
 
     private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
+    /** 공유 1개 이상 시 회원공개 열람 허용 등 접근 정책 적용용 */
+    private final MemberAnswerAccessService memberAnswerAccessService;
 
     /**
      * 피드 목록을 커서 기반으로 조회한다 (무한스크롤용).
      * <p>
      * <b>질문 조건</b>: visibility=전체공개, forcedPrivate=false. 정렬은 createdAt DESC, id DESC.
-     * <b>대표 답변</b>: 질문당 1개. 좋아요 많은 순 → 동점이면 최신순. 비로그인 시 전체공개 답변만 후보, 로그인 시 전체공개+회원공개.
-     * <b>answerCounts</b>: 권한별 답변 수를 담아 UI에서 "로그인하고 N개 더 보기" 등에 활용할 수 있게 한다.
+     * <b>대표 답변</b>: 질문당 1개. 좋아요 많은 순 → 동점이면 최신순. 허용 visibility는 "면접 경험 1개 공유 시 회원공개 열람" 정책 적용.
+     * <b>answerCounts</b>: 권한별 답변 수를 담아 UI에서 "1개 공유하고 N개 더 보기" 등에 활용할 수 있게 한다.
      *
      * @param companyId 회사 ID 필터 (null이면 전체 회사)
      * @param memberId  로그인한 회원 ID (null이면 비로그인 → 전체공개 답변만 노출)
@@ -82,12 +88,12 @@ public class FeedService {
         List<UUID> questionIds = questions.stream().map(Question::getId).toList();
 
         // ─── 2) 질문별 대표 답변 1개 + 권한별 답변 수 조회 ─────────────────────────────
-        // 비로그인: 전체공개 답변만 후보. 로그인: 전체공개 + 회원공개 후보 (대표 답변 선정 시 사용)
-        List<AnswerVisibility> allowedVisibilities = memberId != null
-                ? List.of(AnswerVisibility.PUBLIC, AnswerVisibility.MEMBERS_ONLY)
-                : List.of(AnswerVisibility.PUBLIC);
+        // "면접 경험 1개 공유 → 모든 면접 정보 열람" 정책 적용.
+        // 비로그인 → [PUBLIC]. 로그인+공유 0개 → [PUBLIC]. 로그인+공유 1개 이상 → [PUBLIC, MEMBERS_ONLY].
+        // (내부에서 해당 회원의 공유 답변 수 COUNT 후 허용 visibility 결정)
+        List<AnswerVisibility> allowedVisibilities = memberAnswerAccessService.getAllowedVisibilities(memberId);
 
-        // 질문당 대표 답변 1개: 좋아요 많은 순 → 동점이면 최신순. allowedVisibilities 내에서만 선정
+        // 질문당 대표 답변 1개: 좋아요 많은 순 → 동점이면 최신순. 위에서 정한 allowedVisibilities 내에서만 선정
         Map<UUID, RepresentativeAnswerRow> representativeMap =
                 answerRepository.findRepresentativeAnswersByQuestionIds(questionIds, allowedVisibilities);
         // 질문별로 visibility(전체공개/회원공개/비공개)마다 답변 개수 → UI에서 "로그인하고 N개 더 보기" 등에 사용
