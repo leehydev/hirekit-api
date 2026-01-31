@@ -16,6 +16,7 @@ import kr.hirekit.api.common.exception.BusinessException;
 import kr.hirekit.api.domain.answer.dto.AnswerCursor;
 import kr.hirekit.api.domain.answer.dto.AnswerListItemResponse;
 import kr.hirekit.api.common.dto.CursorPageResponse;
+import kr.hirekit.api.common.dto.OffsetPageResponse;
 import kr.hirekit.api.domain.answer.entity.Answer;
 import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
@@ -84,6 +85,23 @@ public class QuestionServiceImpl implements QuestionService {
         }
 
         return QuestionDetailResponse.from(question);
+    }
+
+    @Override
+    public OffsetPageResponse<QuestionDetailResponse> searchQuestions(String keyword,
+            kr.hirekit.api.common.dto.PageRequest pageRequest) {
+        var pageable = pageRequest.toPageable();
+        var page = questionRepository.searchQuestions(QuestionVisibility.PUBLIC, keyword, pageable);
+        var content = page.getContent().stream().map(QuestionDetailResponse::from).toList();
+        return OffsetPageResponse.<QuestionDetailResponse>builder()
+                .content(content)
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .page(page.getNumber())
+                .size(page.getSize())
+                .first(page.isFirst())
+                .last(page.isLast())
+                .build();
     }
 
     @Override

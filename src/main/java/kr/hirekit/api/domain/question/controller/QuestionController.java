@@ -23,6 +23,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.hirekit.api.common.dto.CursorPageResponse;
+import kr.hirekit.api.common.dto.OffsetPageResponse;
+import kr.hirekit.api.common.dto.PageRequest;
 import kr.hirekit.api.domain.answer.dto.AnswerListItemResponse;
 import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
@@ -103,6 +105,21 @@ public class QuestionController {
             @RequestBody @Valid QuestionVisibilityUpdateRequest request,
             @AuthenticationPrincipal UUID memberId) {
         return ResponseEntity.ok(questionService.updateQuestionVisibility(id, request, memberId));
+    }
+
+    @Operation(summary = "질문 키워드 검색", description = "전체공개 질문을 키워드(content)로 검색. 오프셋 페이징. keyword 미입력 시 전체 공개 질문 목록.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/search")
+    public ResponseEntity<OffsetPageResponse<QuestionDetailResponse>> searchQuestions(
+            @Parameter(description = "검색어 (미입력 시 전체 목록)") @RequestParam(name = "keyword", required = false) String keyword,
+            @Parameter(description = "페이지 번호 (0-based)") @RequestParam(name = "page", required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "페이지 크기") @RequestParam(name = "size", required = false, defaultValue = "10") Integer size,
+            @Parameter(description = "정렬 필드 (createdAt, id)") @RequestParam(name = "sortBy", required = false, defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "정렬 방향 (asc, desc)") @RequestParam(name = "sortDirection", required = false, defaultValue = "desc") String sortDirection) {
+        PageRequest pageRequest = new PageRequest(page, size, sortBy, sortDirection);
+        return ResponseEntity.ok(questionService.searchQuestions(keyword, pageRequest));
     }
 
     @Operation(summary = "질문 단건 조회", description = "전체공개이며 강제 비공개가 아닌 질문만 조회 가능. 그 외는 404.")
