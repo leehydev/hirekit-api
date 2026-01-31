@@ -3,6 +3,7 @@ package kr.hirekit.api.config;
 import jakarta.servlet.http.HttpServletResponse;
 import kr.hirekit.api.auth.jwt.JwtAuthenticationFilter;
 import kr.hirekit.api.auth.oauth2.CustomOAuth2UserService;
+import kr.hirekit.api.auth.oauth2.filter.OAuth2ReturnToFilter;
 import kr.hirekit.api.auth.oauth2.handler.OAuth2FailureHandler;
 import kr.hirekit.api.auth.oauth2.handler.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -43,6 +45,9 @@ public class SecurityConfig {
     // 로그인 실패 핸들러
     private final OAuth2FailureHandler oAuth2FailureHandler;
 
+    // OAuth2 진입 시 return_to 쿠키 저장 필터
+    private final OAuth2ReturnToFilter oAuth2ReturnToFilter;
+
     // 프론트엔드 URL (application.yml에서 주입)
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -67,6 +72,8 @@ public class SecurityConfig {
                                 "/login/**",
                                 "/oauth2/**",
                                 "/api/auth/**",
+                                "/api/feed",
+                                "/api/codes",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/test/**")
@@ -87,6 +94,9 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler))
+
+                // OAuth2 진입 시 return_to 쿠키 저장 (카카오 리다이렉트 전에 실행)
+                .addFilterBefore(oAuth2ReturnToFilter, OAuth2AuthorizationRequestRedirectFilter.class)
 
                 // JWT 필터 추가
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
