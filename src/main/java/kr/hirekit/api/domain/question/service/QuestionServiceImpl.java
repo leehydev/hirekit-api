@@ -105,7 +105,7 @@ public class QuestionServiceImpl implements QuestionService {
         var cursorId = parsed.map(AnswerCursor::getAnswerId).orElse(null);
 
         List<Answer> answers = answerRepository.findAnswersByQuestionIdCursor(
-                questionId, allowedVisibilities, cursorCreatedAt, cursorId, PageRequest.of(0, pageSize));
+                questionId, allowedVisibilities, memberId, cursorCreatedAt, cursorId, PageRequest.of(0, pageSize));
 
         if (answers.isEmpty()) {
             return CursorAnswerListResponse.builder().items(List.of()).nextCursor(null).build();

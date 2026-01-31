@@ -115,7 +115,7 @@ public class QuestionController {
         return ResponseEntity.ok(questionService.getQuestion(id));
     }
 
-    @Operation(summary = "질문별 답변 목록 조회 (커서 기반)", description = "전체공개 질문의 답변만 조회. 비로그인 시 전체공개 답변만, 로그인 시 전체공개+회원공개 답변 포함. "
+    @Operation(summary = "질문별 답변 목록 조회 (커서 기반)", description = "전체공개 질문의 답변만 조회. 비로그인 시 전체공개 답변만, 로그인 시 전체공개+회원공개 답변 포함. 로그인한 작성자는 해당 질문에 대한 자신의 비공개 답변도 목록에 포함되어 노출됨. "
             + "cursor: 첫 요청 시 생략, 이후 응답의 nextCursor 전달. size: 기본 20, 최대 50.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),

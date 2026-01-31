@@ -77,4 +77,24 @@ public class Answer extends BaseEntity {
      */
     @Column(name = "forced_private", nullable = false)
     private boolean forcedPrivate;
+
+    /**
+     * 답변 내용·팁·합격여부·면접일자·공개여부·작성자숨김 수정.
+     */
+    public void update(String content, String tip, PassStatus passStatus, LocalDate interviewDate,
+            AnswerVisibility visibility, boolean authorHidden) {
+        this.content = content;
+        this.tip = tip;
+        this.passStatus = passStatus;
+        this.interviewDate = interviewDate;
+        this.visibility = visibility;
+        this.authorHidden = authorHidden;
+    }
+
+    /**
+     * 답변 공개상태만 변경.
+     */
+    public void updateVisibility(AnswerVisibility visibility) {
+        this.visibility = visibility;
+    }
 }

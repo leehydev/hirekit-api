@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 public class AnswerDetailResponse extends BaseResponse {
 
     private UUID questionId;
+    private UUID authorId;
     private String content;
     private String tip;
     private PassStatus passStatus;
@@ -27,10 +28,11 @@ public class AnswerDetailResponse extends BaseResponse {
 
     @Builder
     public AnswerDetailResponse(UUID id, LocalDateTime createdAt, LocalDateTime updatedAt,
-            UUID questionId, String content, String tip, PassStatus passStatus, LocalDate interviewDate,
+            UUID questionId, UUID authorId, String content, String tip, PassStatus passStatus, LocalDate interviewDate,
             boolean authorHidden, AnswerVisibility visibility) {
         super(id, createdAt, updatedAt);
         this.questionId = questionId;
+        this.authorId = authorId;
         this.content = content;
         this.tip = tip;
         this.passStatus = passStatus;
@@ -45,6 +47,7 @@ public class AnswerDetailResponse extends BaseResponse {
                 .createdAt(answer.getCreatedAt())
                 .updatedAt(answer.getUpdatedAt())
                 .questionId(answer.getQuestion().getId())
+                .authorId(answer.getAuthor().getId())
                 .content(answer.getContent())
                 .tip(answer.getTip())
                 .passStatus(answer.getPassStatus())
