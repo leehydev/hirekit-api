@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -77,6 +78,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/test/**")
+                        .permitAll()
+                        // 질문·답변 조회만 public (등록은 인증 필요)
+                        .requestMatchers(HttpMethod.GET, "/api/questions/**")
                         .permitAll()
                         // 나머지는 인증 필요
                         .anyRequest().authenticated())

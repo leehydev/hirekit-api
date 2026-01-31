@@ -3,6 +3,7 @@ package kr.hirekit.api.domain.question.service;
 import java.util.UUID;
 
 import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
+import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
 
@@ -44,4 +45,15 @@ public interface QuestionService {
      * @throws kr.hirekit.api.common.exception.BusinessException 질문이 없거나 조회 권한이 없을 때 QUESTION_NOT_FOUND
      */
     CursorAnswerListResponse getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor, Integer size);
+
+    /**
+     * 특정 질문의 회원 전용 답변 수 조회 (public API).
+     * 회원이면 0, 비회원이면 해당 질문의 회원 전용(MEMBERS_ONLY) 답변 수를 반환.
+     *
+     * @param questionId 질문 ID
+     * @param memberId   로그인 회원 ID (null이면 비회원)
+     * @return membersOnlyAnswerCount (회원 0, 비회원 회원 전용 답변 수)
+     * @throws kr.hirekit.api.common.exception.BusinessException 질문이 없거나 조회 권한이 없을 때 QUESTION_NOT_FOUND
+     */
+    MembersOnlyAnswerCountResponse getMembersOnlyAnswerCount(UUID questionId, UUID memberId);
 }
