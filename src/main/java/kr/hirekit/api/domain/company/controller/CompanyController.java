@@ -39,7 +39,7 @@ public class CompanyController {
     })
     @GetMapping
     public ResponseEntity<Page<CompanyResponse>> search(
-            @Parameter(description = "검색할 법인명(기업명)", example = "메리츠자산운용", required = true) @RequestParam String name) {
+            @Parameter(description = "검색할 법인명(기업명)", example = "메리츠자산운용", required = true) @RequestParam(required = true, name = "name") String name) {
         return ResponseEntity.ok(companyService.getCompanies(name));
     }
 

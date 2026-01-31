@@ -3,6 +3,7 @@ package kr.hirekit.api.domain.company.dto;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -98,7 +99,16 @@ public class CompanyResponse extends BaseResponse {
             return new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
         }
         CorpOutlineItems items = apiResponse.getResponse().getBody().getItems();
+        // 같은 사업자번호(bzno)면 lastOpegDt(최종개업일)가 가장 최근인 항목만 사용
         List<CompanyResponse> content = items.getItemSafe().stream()
+                .collect(Collectors.groupingBy(item -> item.getBzno() != null ? item.getBzno() : ""))
+                .values().stream()
+                .map(group -> group.stream()
+                        .max(Comparator.comparing(
+                                item -> item.getLastOpegDt() != null && !item.getLastOpegDt().isBlank()
+                                        ? item.getLastOpegDt()
+                                        : ""))
+                        .orElseThrow())
                 .map(CompanyResponse::from)
                 .collect(Collectors.toList());
         int pageNo = items.getPageNo() != null ? items.getPageNo() : 1;

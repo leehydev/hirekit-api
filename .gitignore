@@ -38,4 +38,5 @@ out/
 
 ### Environment ###
 .env*
+!.env.example
 application-local.yaml

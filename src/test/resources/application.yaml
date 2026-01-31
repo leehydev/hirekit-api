@@ -1,6 +1,11 @@
 spring:
   application:
     name: hirekit-api
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   datasource:
     url: jdbc:h2:mem:testdb;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
@@ -37,6 +42,8 @@ spring:
 app:
   frontend-url: http://localhost:3000
   cookie-domain: localhost
+  redis:
+    key-prefix: ${REDIS_KEY_PREFIX:}
 jwt:
   secret: test-jwt-secret-key-for-testing-purposes-only-1234567890
   access-token-expiry: 1800000

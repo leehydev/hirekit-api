@@ -4,6 +4,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import kr.hirekit.api.auth.jwt.JwtTokenProvider;
+import kr.hirekit.api.auth.service.TokenRefreshService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class AuthController {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenRefreshService tokenRefreshService;
 
     // 쿠키 도메인 (application.yml에서 주입)
     @Value("${app.cookie-domain}")
@@ -66,10 +68,10 @@ public class AuthController {
 
         // 4. Refresh Token에서 회원 ID 추출
         UUID memberId = jwtTokenProvider.getMemberId(refreshToken);
-        log.info("토큰 갱신 성공 - 회원 ID: {}", memberId);
 
-        // 5. 새로운 Access Token 생성
-        String newAccessToken = jwtTokenProvider.createAccessToken(memberId);
+        // 5. 동시 요청 시 첫 요청만 갱신, 나머지는 캐시된 토큰 반환 (Redis)
+        String newAccessToken = tokenRefreshService.refreshAccessToken(refreshToken, memberId);
+        log.info("토큰 갱신 성공 - 회원 ID: {}", memberId);
 
         // 6. 새로운 Access Token을 쿠키에 저장
         addCookieWithSameSite(response, "accessToken", newAccessToken, (int) (accessTokenExpiry / 1000));

@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface CompanyRepository extends JpaRepository<Company, UUID> {
 
-    List<Company> findByMemberId(UUID memberId);
+    List<Company> findByRegisteredById(UUID memberId);
 }
