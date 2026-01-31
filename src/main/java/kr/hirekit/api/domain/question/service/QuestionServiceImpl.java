@@ -19,6 +19,7 @@ import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
 import kr.hirekit.api.domain.answer.entity.Answer;
 import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
+import kr.hirekit.api.domain.answer.service.MemberAnswerAccessService;
 import kr.hirekit.api.domain.company.entity.Company;
 import kr.hirekit.api.domain.company.repository.CompanyRepository;
 import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
@@ -29,6 +30,13 @@ import kr.hirekit.api.domain.question.entity.QuestionVisibility;
 import kr.hirekit.api.domain.question.repository.QuestionRepository;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * 질문 CRUD 및 질문별 답변 목록 조회.
+ * <p>
+ * 질문별 답변 목록 노출 범위는 "면접 경험 1개 공유 → 모든 면접 정보 열람" 정책에 따라
+ * {@link kr.hirekit.api.domain.answer.service.MemberAnswerAccessService}로 허용
+ * visibility를 결정한다.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -41,6 +49,8 @@ public class QuestionServiceImpl implements QuestionService {
     private final AnswerRepository answerRepository;
     private final CompanyRepository companyRepository;
     private final MemberRepository memberRepository;
+    /** 공유 1개 이상 시 회원공개 답변 열람 허용 등 접근 정책 적용용 */
+    private final MemberAnswerAccessService memberAnswerAccessService;
 
     @Override
     @Transactional
@@ -75,7 +85,8 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public CursorAnswerListResponse getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor, Integer size) {
+    public CursorAnswerListResponse getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor,
+            Integer size) {
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
         if (question.getVisibility() != QuestionVisibility.PUBLIC || question.isForcedPrivate()) {
@@ -83,9 +94,9 @@ public class QuestionServiceImpl implements QuestionService {
         }
 
         int pageSize = size != null ? Math.min(Math.max(1, size), MAX_ANSWER_PAGE_SIZE) : DEFAULT_ANSWER_PAGE_SIZE;
-        List<AnswerVisibility> allowedVisibilities = memberId != null
-                ? List.of(AnswerVisibility.PUBLIC, AnswerVisibility.MEMBERS_ONLY)
-                : List.of(AnswerVisibility.PUBLIC);
+        // "면접 경험 1개 공유 → 모든 면접 정보 열람" 정책. 비로그인/공유 0개 → PUBLIC만, 공유 1개 이상 → PUBLIC +
+        // MEMBERS_ONLY
+        List<AnswerVisibility> allowedVisibilities = memberAnswerAccessService.getAllowedVisibilities(memberId);
 
         Optional<AnswerCursor> parsed = AnswerCursor.parse(cursor);
         var cursorCreatedAt = parsed.map(AnswerCursor::getCreatedAt).orElse(null);
@@ -118,8 +129,9 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     public MembersOnlyAnswerCountResponse getMembersOnlyAnswerCount(UUID questionId, UUID memberId) {
-        if (memberId != null) {
-            return MembersOnlyAnswerCountResponse.of(0L);
+        List<AnswerVisibility> allowedVisibilities = memberAnswerAccessService.getAllowedVisibilities(memberId);
+        if (allowedVisibilities.contains(AnswerVisibility.MEMBERS_ONLY)) {
+            return MembersOnlyAnswerCountResponse.of(0);
         }
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
