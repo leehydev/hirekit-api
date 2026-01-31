@@ -21,6 +21,7 @@ public class FeedQuestionSummary {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private UUID authorId;
     private UUID companyId;
     private String companyName;
     private Job job;
@@ -32,6 +33,7 @@ public class FeedQuestionSummary {
                 .id(q.getId())
                 .createdAt(q.getCreatedAt())
                 .updatedAt(q.getUpdatedAt())
+                .authorId(q.getAuthor().getId())
                 .companyId(q.getCompany().getId())
                 .companyName(q.getCompany().getName())
                 .job(q.getJob())

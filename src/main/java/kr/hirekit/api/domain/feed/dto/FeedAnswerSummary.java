@@ -20,6 +20,7 @@ public class FeedAnswerSummary {
 
     private UUID id;
     private LocalDateTime createdAt;
+    private UUID authorId;
     private String content;
     private String tip;
     private long likeCount;
@@ -31,6 +32,7 @@ public class FeedAnswerSummary {
         return FeedAnswerSummary.builder()
                 .id(a.getId())
                 .createdAt(a.getCreatedAt())
+                .authorId(a.getAuthor().getId())
                 .content(a.getContent())
                 .tip(a.getTip())
                 .likeCount(likeCount)

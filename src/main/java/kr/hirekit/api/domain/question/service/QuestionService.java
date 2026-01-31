@@ -6,6 +6,8 @@ import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
 import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
+import kr.hirekit.api.domain.question.dto.QuestionUpdateRequest;
+import kr.hirekit.api.domain.question.dto.QuestionVisibilityUpdateRequest;
 
 /**
  * 질문 조회 및 등록 서비스.
@@ -56,4 +58,35 @@ public interface QuestionService {
      * @throws kr.hirekit.api.common.exception.BusinessException 질문이 없거나 조회 권한이 없을 때 QUESTION_NOT_FOUND
      */
     MembersOnlyAnswerCountResponse getMembersOnlyAnswerCount(UUID questionId, UUID memberId);
+
+    /**
+     * 질문 수정. 작성자만 가능하며, 답변이 하나도 없을 때만 가능.
+     *
+     * @param id        질문 ID
+     * @param request   수정 요청 (직무, 내용, 공개 여부, 작성자 숨김 여부)
+     * @param memberId  요청 회원 ID (작성자와 일치해야 함)
+     * @return 수정된 질문 상세
+     * @throws kr.hirekit.api.common.exception.BusinessException QUESTION_NOT_FOUND, FORBIDDEN, QUESTION_HAS_ANSWERS
+     */
+    QuestionDetailResponse updateQuestion(UUID id, QuestionUpdateRequest request, UUID memberId);
+
+    /**
+     * 질문 삭제. 작성자만 가능하며, 답변이 하나도 없을 때만 가능.
+     *
+     * @param id       질문 ID
+     * @param memberId 요청 회원 ID (작성자와 일치해야 함)
+     * @throws kr.hirekit.api.common.exception.BusinessException QUESTION_NOT_FOUND, FORBIDDEN, QUESTION_HAS_ANSWERS
+     */
+    void deleteQuestion(UUID id, UUID memberId);
+
+    /**
+     * 질문 공개상태 변경. 작성자만 가능하며, 답변이 하나도 없을 때만 가능.
+     *
+     * @param id        질문 ID
+     * @param request   공개상태 변경 요청
+     * @param memberId  요청 회원 ID (작성자와 일치해야 함)
+     * @return 변경된 질문 상세
+     * @throws kr.hirekit.api.common.exception.BusinessException QUESTION_NOT_FOUND, FORBIDDEN, QUESTION_HAS_ANSWERS
+     */
+    QuestionDetailResponse updateQuestionVisibility(UUID id, QuestionVisibilityUpdateRequest request, UUID memberId);
 }

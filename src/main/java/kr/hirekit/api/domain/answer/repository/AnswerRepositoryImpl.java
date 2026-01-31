@@ -96,6 +96,7 @@ public class AnswerRepositoryImpl implements AnswerRepositoryCustom {
     public List<Answer> findAnswersByQuestionIdCursor(
             UUID questionId,
             List<AnswerVisibility> allowedVisibilities,
+            UUID viewerMemberId,
             LocalDateTime cursorCreatedAt,
             UUID cursorId,
             Pageable pageable) {
@@ -104,12 +105,19 @@ public class AnswerRepositoryImpl implements AnswerRepositoryCustom {
         }
         QAnswer a = QAnswer.answer;
 
+        BooleanExpression visibilityCondition =
+                viewerMemberId != null
+                        ? a.visibility.in(allowedVisibilities)
+                                .or(a.visibility.eq(AnswerVisibility.PRIVATE).and(a.author.id.eq(viewerMemberId)))
+                        : a.visibility.in(allowedVisibilities);
+
         return queryFactory
                 .selectFrom(a)
+                .join(a.author).fetchJoin()
                 .where(
                         a.question.id.eq(questionId),
                         a.forcedPrivate.eq(false),
-                        a.visibility.in(allowedVisibilities),
+                        visibilityCondition,
                         cursorLt(a, cursorCreatedAt, cursorId))
                 .orderBy(a.createdAt.desc(), a.id.desc())
                 .limit(pageable.getPageSize())

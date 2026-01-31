@@ -11,6 +11,11 @@ import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 public interface AnswerRepository extends JpaRepository<Answer, UUID>, AnswerRepositoryCustom {
 
     /**
+     * 해당 질문에 답변이 하나라도 있는지 여부.
+     */
+    boolean existsByQuestion_Id(UUID questionId);
+
+    /**
      * 해당 회원이 "공유한" 답변 수를 센다.
      * <p>
      * "면접 경험 1개 공유" 정책에서 "공유"의 정의와 동일하다.
