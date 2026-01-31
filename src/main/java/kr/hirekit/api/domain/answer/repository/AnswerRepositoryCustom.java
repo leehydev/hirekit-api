@@ -5,12 +5,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import kr.hirekit.api.domain.answer.entity.Answer;
 import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 
 public interface AnswerRepositoryCustom {
+
+    /**
+     * 키워드로 답변 검색 (오프셋 페이징).
+     * <p>
+     * 조건: 질문은 전체공개·강제비공개 아님. 답변은 forcedPrivate=false, visibility는 허용 목록에 포함되거나
+     * (PRIVATE이면서 작성자=viewerMemberId). keyword가 null/blank면 content·tip 조건 없이 조회.
+     * keyword가 있으면 content 또는 tip에 LIKE %keyword% 적용.
+     *
+     * @param keyword             검색어 (null/blank면 미적용)
+     * @param allowedVisibilities 노출 허용 visibility (PUBLIC 또는 PUBLIC+MEMBERS_ONLY)
+     * @param viewerMemberId      로그인 회원 ID (null이면 비로그인 → 비공개 답변 제외)
+     * @param pageable            페이지, 크기, 정렬
+     * @return 검색 결과 페이지
+     */
+    Page<Answer> searchAnswers(String keyword, List<AnswerVisibility> allowedVisibilities,
+            UUID viewerMemberId, Pageable pageable);
 
     /**
      * 질문별 대표 답변 1개 (좋아요 많은 순, 최신순) + 좋아요 수

@@ -1,11 +1,14 @@
 package kr.hirekit.api.domain.answer.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import kr.hirekit.api.auth.member.entity.Member;
+import kr.hirekit.api.common.dto.OffsetPageResponse;
+import kr.hirekit.api.common.dto.PageRequest;
 import kr.hirekit.api.auth.member.repository.MemberRepository;
 import kr.hirekit.api.common.dto.ErrorCode;
 import kr.hirekit.api.common.exception.BusinessException;
@@ -16,6 +19,7 @@ import kr.hirekit.api.domain.answer.dto.AnswerUpdateRequest;
 import kr.hirekit.api.domain.answer.dto.AnswerVisibilityUpdateRequest;
 import kr.hirekit.api.domain.answer.entity.Answer;
 import kr.hirekit.api.domain.answer.entity.AnswerLike;
+import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.repository.AnswerLikeRepository;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
 import kr.hirekit.api.domain.question.entity.Question;
@@ -76,6 +80,24 @@ public class AnswerServiceImpl implements AnswerService {
             throw new BusinessException(ErrorCode.ANSWER_NOT_FOUND);
         }
         return AnswerDetailResponse.from(answer);
+    }
+
+    @Override
+    public OffsetPageResponse<AnswerDetailResponse> searchAnswers(String keyword, UUID memberId,
+            PageRequest pageRequest) {
+        List<AnswerVisibility> allowedVisibilities = memberAnswerAccessService.getAllowedVisibilities(memberId);
+        var pageable = pageRequest.toPageable();
+        var page = answerRepository.searchAnswers(keyword, allowedVisibilities, memberId, pageable);
+        List<AnswerDetailResponse> content = page.getContent().stream().map(AnswerDetailResponse::from).toList();
+        return OffsetPageResponse.<AnswerDetailResponse>builder()
+                .content(content)
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .page(page.getNumber())
+                .size(page.getSize())
+                .first(page.isFirst())
+                .last(page.isLast())
+                .build();
     }
 
     @Override
