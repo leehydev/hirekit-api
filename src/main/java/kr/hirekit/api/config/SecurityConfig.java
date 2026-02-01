@@ -82,6 +82,7 @@ public class SecurityConfig {
                         // 질문·답변 조회만 public (등록은 인증 필요)
                         .requestMatchers(HttpMethod.GET, "/api/questions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/companies/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         // 나머지는 인증 필요
                         .anyRequest().authenticated())
 
