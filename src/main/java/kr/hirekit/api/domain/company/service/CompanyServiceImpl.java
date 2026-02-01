@@ -1,5 +1,6 @@
 package kr.hirekit.api.domain.company.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -9,9 +10,12 @@ import kr.hirekit.api.auth.member.entity.Member;
 import kr.hirekit.api.auth.member.repository.MemberRepository;
 import kr.hirekit.api.client.PublicDataClient;
 import kr.hirekit.api.common.dto.ErrorCode;
+import kr.hirekit.api.common.dto.OffsetPageResponse;
+import kr.hirekit.api.common.dto.PageRequest;
 import kr.hirekit.api.common.exception.BusinessException;
 import kr.hirekit.api.domain.company.dto.CompanyCreateRequest;
 import kr.hirekit.api.domain.company.dto.CompanyResponse;
+import kr.hirekit.api.domain.company.dto.CompanySearchRequest;
 import kr.hirekit.api.domain.company.entity.Company;
 import kr.hirekit.api.domain.company.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
@@ -72,5 +76,29 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public Page<CompanyResponse> getCompanies(String name) {
         return CompanyResponse.pageFrom(publicDataClient.getCorpOutline(null, name));
+    }
+
+    @Override
+    public OffsetPageResponse<CompanyResponse> searchCompanies(String keyword, String industry,
+            PageRequest pageRequest) {
+        CompanySearchRequest request = CompanySearchRequest.builder()
+                .page(pageRequest.getPage())
+                .size(pageRequest.getSize())
+                .sortBy(pageRequest.getSortBy())
+                .sortDirection(pageRequest.getSortDirection())
+                .keyword(keyword)
+                .industry(industry)
+                .build();
+        var page = companyRepository.search(request);
+        List<CompanyResponse> content = page.getContent().stream().map(CompanyResponse::from).toList();
+        return OffsetPageResponse.<CompanyResponse>builder()
+                .content(content)
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .page(page.getNumber())
+                .size(page.getSize())
+                .first(page.isFirst())
+                .last(page.isLast())
+                .build();
     }
 }

@@ -13,9 +13,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
+import kr.hirekit.api.common.dto.OffsetPageResponse;
+import kr.hirekit.api.common.dto.PageRequest;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -36,6 +39,22 @@ import lombok.RequiredArgsConstructor;
 public class AnswerController {
 
     private final AnswerService answerService;
+
+    @Operation(summary = "답변 키워드 검색", description = "전체공개 질문에 달린 답변을 content·tip 기준으로 검색. 오프셋 페이징. 비로그인 시 전체공개 답변만, 로그인 시 정책에 따라 회원공개 포함.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/answers/search")
+    public ResponseEntity<OffsetPageResponse<AnswerDetailResponse>> searchAnswers(
+            @Parameter(description = "검색어 (미입력 시 전체 목록)") @RequestParam(name = "keyword", required = false) String keyword,
+            @Parameter(description = "페이지 번호 (0-based)") @RequestParam(name = "page", required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "페이지 크기") @RequestParam(name = "size", required = false, defaultValue = "10") Integer size,
+            @Parameter(description = "정렬 필드 (createdAt, id)") @RequestParam(name = "sortBy", required = false, defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "정렬 방향 (asc, desc)") @RequestParam(name = "sortDirection", required = false, defaultValue = "desc") String sortDirection,
+            @AuthenticationPrincipal UUID memberId) {
+        PageRequest pageRequest = new PageRequest(page, size, sortBy, sortDirection);
+        return ResponseEntity.ok(answerService.searchAnswers(keyword, memberId, pageRequest));
+    }
 
     @Operation(summary = "답변 등록", description = "로그인한 회원이 특정 질문에 답변을 등록합니다. 등록자는 해당 답변의 작성자로 저장됩니다.")
     @ApiResponses({

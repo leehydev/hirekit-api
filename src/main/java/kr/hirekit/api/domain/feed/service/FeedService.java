@@ -16,11 +16,11 @@ import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.repository.AnswerRepository;
 import kr.hirekit.api.domain.answer.service.MemberAnswerAccessService;
 import kr.hirekit.api.domain.answer.repository.RepresentativeAnswerRow;
-import kr.hirekit.api.domain.feed.dto.CursorFeedResponse;
+import kr.hirekit.api.common.dto.CursorPageResponse;
+import kr.hirekit.api.domain.feed.dto.FeedItemResponse;
 import kr.hirekit.api.domain.feed.dto.FeedAnswerCounts;
 import kr.hirekit.api.domain.feed.dto.FeedAnswerSummary;
 import kr.hirekit.api.domain.feed.dto.FeedCursor;
-import kr.hirekit.api.domain.feed.dto.FeedItemResponse;
 import kr.hirekit.api.domain.feed.dto.FeedQuestionSummary;
 import kr.hirekit.api.domain.question.entity.Job;
 import kr.hirekit.api.domain.question.entity.Question;
@@ -66,7 +66,7 @@ public class FeedService {
      * @param size      한 페이지에 가져올 질문 수 (null이면 {@value #DEFAULT_PAGE_SIZE}, 최대 {@value #MAX_PAGE_SIZE})
      * @return items와 다음 페이지용 nextCursor (더 없으면 null)
      */
-    public CursorFeedResponse getFeed(UUID companyId, UUID memberId, Job job, String cursor, Integer size) {
+    public CursorPageResponse<FeedItemResponse> getFeed(UUID companyId, UUID memberId, Job job, String cursor, Integer size) {
         // size: null이면 기본값, 1 미만이면 1, MAX 초과면 MAX로 클램프
         int pageSize = size != null ? Math.min(Math.max(1, size), MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
         PageRequest pageRequest = PageRequest.of(0, pageSize);
@@ -82,7 +82,7 @@ public class FeedService {
                 QuestionVisibility.PUBLIC, companyId, job, cursorCreatedAt, cursorId, pageRequest);
 
         if (questions.isEmpty()) {
-            return CursorFeedResponse.builder().items(List.of()).nextCursor(null).build();
+            return CursorPageResponse.<FeedItemResponse>builder().items(List.of()).nextCursor(null).build();
         }
 
         List<UUID> questionIds = questions.stream().map(Question::getId).toList();
@@ -141,7 +141,7 @@ public class FeedService {
                 ? FeedCursor.encode(last.getCreatedAt(), last.getId())
                 : null;
 
-        return CursorFeedResponse.builder()
+        return CursorPageResponse.<FeedItemResponse>builder()
                 .items(items)
                 .nextCursor(nextCursor)
                 .build();

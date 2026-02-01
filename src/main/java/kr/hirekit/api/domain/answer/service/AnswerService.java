@@ -2,6 +2,8 @@ package kr.hirekit.api.domain.answer.service;
 
 import java.util.UUID;
 
+import kr.hirekit.api.common.dto.OffsetPageResponse;
+import kr.hirekit.api.common.dto.PageRequest;
 import kr.hirekit.api.domain.answer.dto.AnswerCreateRequest;
 import kr.hirekit.api.domain.answer.dto.AnswerDetailResponse;
 import kr.hirekit.api.domain.answer.dto.AnswerLikeToggleResponse;
@@ -36,6 +38,17 @@ public interface AnswerService {
      * @throws kr.hirekit.api.common.exception.BusinessException QUESTION_NOT_FOUND, ANSWER_NOT_FOUND
      */
     AnswerDetailResponse getAnswer(UUID questionId, UUID answerId, UUID memberId);
+
+    /**
+     * 키워드로 답변 검색 (오프셋 페이징).
+     * 전체공개 질문에 달린 답변만 대상. visibility는 "면접 경험 1개 공유" 정책 적용. keyword는 content·tip 기준 검색.
+     *
+     * @param keyword     검색어 (null/blank면 전체 목록)
+     * @param memberId    로그인 회원 ID (null이면 비로그인 → 전체공개 답변만)
+     * @param pageRequest 페이지, 크기, 정렬
+     * @return 검색 결과 페이지
+     */
+    OffsetPageResponse<AnswerDetailResponse> searchAnswers(String keyword, UUID memberId, PageRequest pageRequest);
 
     /**
      * 답변 수정. 작성자만 가능.

@@ -9,9 +9,14 @@ import java.util.stream.Collectors;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -19,6 +24,7 @@ import kr.hirekit.api.domain.answer.entity.Answer;
 import kr.hirekit.api.domain.answer.entity.AnswerVisibility;
 import kr.hirekit.api.domain.answer.entity.QAnswer;
 import kr.hirekit.api.domain.answer.entity.QAnswerLike;
+import kr.hirekit.api.domain.question.entity.QuestionVisibility;
 import lombok.RequiredArgsConstructor;
 
 @Repository
@@ -27,6 +33,72 @@ public class AnswerRepositoryImpl implements AnswerRepositoryCustom {
 
     private final EntityManager entityManager;
     private final JPAQueryFactory queryFactory;
+
+    @Override
+    public Page<Answer> searchAnswers(String keyword, List<AnswerVisibility> allowedVisibilities,
+            UUID viewerMemberId, Pageable pageable) {
+        QAnswer a = QAnswer.answer;
+
+        BooleanExpression visibilityCondition = viewerMemberId != null
+                ? a.visibility.in(allowedVisibilities)
+                        .or(a.visibility.eq(AnswerVisibility.PRIVATE).and(a.author.id.eq(viewerMemberId)))
+                : a.visibility.in(allowedVisibilities);
+
+        List<Answer> content = queryFactory
+                .selectFrom(a)
+                .join(a.question).fetchJoin()
+                .join(a.author).fetchJoin()
+                .where(
+                        a.question.visibility.eq(QuestionVisibility.PUBLIC),
+                        a.question.forcedPrivate.eq(false),
+                        a.forcedPrivate.eq(false),
+                        contentOrTipContains(a, keyword),
+                        visibilityCondition)
+                .orderBy(toOrderSpecifiers(a, pageable.getSort()))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        Long total = queryFactory
+                .select(a.count())
+                .from(a)
+                .where(
+                        a.question.visibility.eq(QuestionVisibility.PUBLIC),
+                        a.question.forcedPrivate.eq(false),
+                        a.forcedPrivate.eq(false),
+                        contentOrTipContains(a, keyword),
+                        visibilityCondition)
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, total != null ? total : 0L);
+    }
+
+    private BooleanExpression contentOrTipContains(QAnswer a, String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        String trimmed = keyword.trim();
+        return a.content.containsIgnoreCase(trimmed).or(a.tip.containsIgnoreCase(trimmed));
+    }
+
+    private OrderSpecifier<?>[] toOrderSpecifiers(QAnswer a, Sort sort) {
+        if (sort == null || sort.isUnsorted()) {
+            return new OrderSpecifier[] {
+                    new OrderSpecifier<>(Order.DESC, a.createdAt),
+                    new OrderSpecifier<>(Order.DESC, a.id)
+            };
+        }
+        return sort.stream()
+                .map(order -> {
+                    Order direction = order.isAscending() ? Order.ASC : Order.DESC;
+                    return switch (order.getProperty()) {
+                        case "id" -> new OrderSpecifier<>(direction, a.id);
+                        case "createdAt" -> new OrderSpecifier<>(direction, a.createdAt);
+                        default -> new OrderSpecifier<>(direction, a.createdAt);
+                    };
+                })
+                .toArray(OrderSpecifier[]::new);
+    }
 
     @Override
     @SuppressWarnings("unchecked")

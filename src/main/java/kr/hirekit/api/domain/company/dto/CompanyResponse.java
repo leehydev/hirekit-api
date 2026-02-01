@@ -58,7 +58,7 @@ public class CompanyResponse extends BaseResponse {
                 .address(company.getAddress())
                 .foundedDate(company.getFoundedDate())
                 .businessNumber(company.getBusinessNumber())
-                .registeredById(company.getRegisteredBy().getId())
+                .registeredById(company.getRegisteredBy() != null ? company.getRegisteredBy().getId() : null)
                 .build();
     }
 

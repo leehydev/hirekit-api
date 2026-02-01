@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import kr.hirekit.api.domain.question.entity.Job;
@@ -14,6 +15,21 @@ import kr.hirekit.api.domain.question.entity.QuestionVisibility;
  * 피드용 질문 목록 등 QueryDSL 기반 동적 조회.
  */
 public interface QuestionRepositoryCustom {
+
+    /**
+     * 키워드로 질문 검색 (오프셋 페이징).
+     * <p>
+     * 조건: visibility=전체공개, forcedPrivate=false.
+     * keyword가 null이거나 blank면 content 조건 없이 전체 공개 질문 목록.
+     * keyword가 있으면 content에 LIKE %keyword% 적용.
+     * 정렬: pageable 기준.
+     *
+     * @param visibility 전체공개
+     * @param keyword    검색어 (null/blank면 미적용)
+     * @param pageable   페이지, 크기, 정렬
+     * @return 검색 결과 페이지
+     */
+    Page<Question> searchQuestions(QuestionVisibility visibility, String keyword, Pageable pageable);
 
     /**
      * 피드 노출용 질문 목록을 동적 조건으로 조회 (커서 페이지네이션).

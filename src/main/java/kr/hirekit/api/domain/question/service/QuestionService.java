@@ -2,7 +2,10 @@ package kr.hirekit.api.domain.question.service;
 
 import java.util.UUID;
 
-import kr.hirekit.api.domain.answer.dto.CursorAnswerListResponse;
+import kr.hirekit.api.common.dto.CursorPageResponse;
+import kr.hirekit.api.common.dto.OffsetPageResponse;
+import kr.hirekit.api.common.dto.PageRequest;
+import kr.hirekit.api.domain.answer.dto.AnswerListItemResponse;
 import kr.hirekit.api.domain.question.dto.MembersOnlyAnswerCountResponse;
 import kr.hirekit.api.domain.question.dto.QuestionCreateRequest;
 import kr.hirekit.api.domain.question.dto.QuestionDetailResponse;
@@ -36,6 +39,16 @@ public interface QuestionService {
     QuestionDetailResponse getQuestion(UUID id);
 
     /**
+     * 키워드로 질문 검색 (오프셋 페이징).
+     * 전체공개(visibility=PUBLIC), 강제 비공개가 아닌 질문만 대상. keyword는 content 기준 LIKE 검색.
+     *
+     * @param keyword     검색어 (null/blank면 전체 공개 질문 목록)
+     * @param pageRequest 페이지, 크기, 정렬
+     * @return 검색 결과 페이지 (목록 + totalElements, totalPages 등)
+     */
+    OffsetPageResponse<QuestionDetailResponse> searchQuestions(String keyword, PageRequest pageRequest);
+
+    /**
      * 특정 질문의 답변 목록을 커서 기반으로 조회 (무한스크롤).
      * 질문이 전체공개가 아니거나 강제 비공개면 404. 비로그인 시 전체공개 답변만, 로그인 시 전체공개+회원공개 답변 포함.
      *
@@ -46,7 +59,7 @@ public interface QuestionService {
      * @return 답변 목록 + nextCursor
      * @throws kr.hirekit.api.common.exception.BusinessException 질문이 없거나 조회 권한이 없을 때 QUESTION_NOT_FOUND
      */
-    CursorAnswerListResponse getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor, Integer size);
+    CursorPageResponse<AnswerListItemResponse> getAnswersByQuestionId(UUID questionId, UUID memberId, String cursor, Integer size);
 
     /**
      * 특정 질문의 회원 전용 답변 수 조회 (public API).
