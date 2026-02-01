@@ -1,6 +1,9 @@
 # 로컬 개발용 설정 예시
 # 이 파일을 application-local.yaml 로 복사한 뒤 값을 채워 사용하세요.
 # application-local.yaml 은 .gitignore 에 포함되어 커밋되지 않습니다.
+#
+# Redis 등 환경 변수는 .env 또는 .env.example 을 참고하여 설정하세요.
+# (REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_KEY_PREFIX)
 
 spring:
   datasource:
